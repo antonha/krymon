@@ -11,7 +11,7 @@ public class Service {
     private final String name;
     private final String url;
     private final Status status;
-    private final DateTime dateTime;
+    private final DateTime lastCheck;
 
     @JsonCreator
     public Service(
@@ -23,14 +23,14 @@ public class Service {
             String url,
             @JsonProperty("status")
             Status status,
-            @JsonProperty("dateTime")
-            DateTime dateTime
+            @JsonProperty("lastCheck")
+            DateTime lastCheck
     ) {
         this.id = id;
         this.name = name;
         this.url = url;
         this.status = status;
-        this.dateTime = dateTime;
+        this.lastCheck = lastCheck;
     }
 
     public enum Status{
@@ -53,8 +53,8 @@ public class Service {
         return status;
     }
 
-    public DateTime getDateTime() {
-        return dateTime;
+    public DateTime getLastCheck() {
+        return lastCheck;
     }
 
     @Override
@@ -66,12 +66,12 @@ public class Service {
                 Objects.equals(name, service.name) &&
                 Objects.equals(url, service.url) &&
                 status == service.status &&
-                Objects.equals(dateTime, service.dateTime);
+                Objects.equals(lastCheck, service.lastCheck);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(id, name, url, status, dateTime);
+        return Objects.hash(id, name, url, status, lastCheck);
     }
 }

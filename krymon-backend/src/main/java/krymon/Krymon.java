@@ -13,10 +13,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import rx.Single;
-import rx.SingleSubscriber;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

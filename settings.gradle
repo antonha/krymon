@@ -1,3 +1,4 @@
-include 'krymon-app'
+include 'krymon-model'
+include ':krymon-app'
 include 'krymon-backend'
 

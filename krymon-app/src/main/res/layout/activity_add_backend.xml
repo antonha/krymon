@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context="krymon.AddBackendActivity">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                  tools:context="net.antonha.krymon.AddBackendActivity" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal"
+        >
+            <Spinner android:layout_width="wrap_content"
+                     android:layout_height="match_parent"
+                     android:id="@+id/add_backend_protocol_spinner"
+            />
+            <EditText android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:id="@+id/add_backend_url_text"
+                      android:hint="Backend Url"
+                      android:inputType="textUri"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal"
+                      style="@style/Widget.AppCompat.ButtonBar"
+        >
+            <Button style="@style/Widget.AppCompat.Button.Borderless" android:layout_width="wrap_content"
+                    android:layout_height="match_parent" android:layout_weight="1" android:text="Cancel" android:id="@+id/add_backend_cancel"/>
+            <Button style="@style/Widget.AppCompat.Button.Borderless" android:layout_weight="1" android:layout_width="wrap_content"
+                    android:layout_height="match_parent" android:text="Add" android:id="@+id/add_backend_add"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>

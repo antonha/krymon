@@ -145,19 +145,19 @@ public class KrymonTest {
         Thread.sleep(10 * CHECK_PERIOD);
         Service service = getServices().getServices().get(0);
         assertEquals(Service.Status.OK, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getDateTime(), DateTime.now()).getSeconds() < 2);
+        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 2);
 
         setStatus(server, 500);
         Thread.sleep(10 * CHECK_PERIOD);
         Service failingService = getServices().getServices().get(0);
         assertEquals(Service.Status.FAIL, failingService.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getDateTime(), DateTime.now()).getSeconds() < 10);
+        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
 
         setStatus(server, 200);
         Thread.sleep(10 * CHECK_PERIOD);
         Service onceAgainSucceding = getServices().getServices().get(0);
         assertEquals(Service.Status.OK, onceAgainSucceding.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getDateTime(), DateTime.now()).getSeconds() < 10);
+        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
 
         delete(onceAgainSucceding.getId());
         assertTrue(getServices().getServices().isEmpty());
@@ -169,7 +169,7 @@ public class KrymonTest {
         Thread.sleep(10 * CHECK_PERIOD);
         Service service = getServices().getServices().get(0);
         assertEquals(Service.Status.FAIL, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getDateTime(), DateTime.now()).getSeconds() < 10);
+        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
         delete(service.getId());
         assertTrue(getServices().getServices().isEmpty());
     }
@@ -180,7 +180,7 @@ public class KrymonTest {
         Thread.sleep(10 * CHECK_PERIOD);
         Service service = getServices().getServices().get(0);
         assertEquals(Service.Status.FAIL, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getDateTime(), DateTime.now()).getSeconds() < 10);
+        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
         delete(service.getId());
         assertTrue(getServices().getServices().isEmpty());
     }
