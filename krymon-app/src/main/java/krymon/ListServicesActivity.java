@@ -14,27 +14,18 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ListServicesActivity extends AppCompatActivity {
 
     public static final String BACKEND = "backend";
-
-    private static final String ITEM_DATA_NAME = "name";
-    private static final String ITEM_DATA_STATUS = "status";
-    private static final String ITEM_DATA_LAST_CHECKED = "last_checked";
-    private static final String ITEM_DATA_URL = "url";
 
     private String backendUrl;
     private KrymonService krymonService;
@@ -43,13 +34,13 @@ public class ListServicesActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_list_services);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         this.backendUrl = getIntent().getStringExtra(BACKEND);
         krymonService = KrymonService.Builder.build(backendUrl);
-
         this.swipeRefreshLayout = findViewById(R.id.list_services_refresh_layout);
 
         refreshServices();
@@ -126,14 +117,17 @@ public class ListServicesActivity extends AppCompatActivity {
                 v.<Button>findViewById(R.id.service_list_item_button_delete).setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        Log.i("ListServicesActivity", "Deleting service with name " + service.getName() + " and id " + service.getId() + " to " + backendUrl);
                         krymonService.deleteService(service.getId()).enqueue(new Callback<Void>() {
                             @Override
                             public void onResponse(Call<Void> call, Response<Void> response) {
+                                Log.i("ListServicesActivity", "Successfully deleted service with name " + service.getName() + " and id " + service.getId() + " to " + backendUrl);
                                 refreshServices();
                             }
 
                             @Override
                             public void onFailure(Call<Void> call, Throwable throwable) {
+                                Log.e("ListServicesActivity", "Failed to deleted service with name " + service.getName() + " and id " + service.getId() + " to " + backendUrl, throwable);
                                 refreshServices();
                             }
                         });
