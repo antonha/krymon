@@ -1,6 +1,7 @@
 group 'net.antonha'
 version '1.0-SNAPSHOT'
 
+apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
 apply plugin: 'application'
 
