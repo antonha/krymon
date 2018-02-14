@@ -120,7 +120,7 @@ $ curl -s localhost:8080/service | jq .
 }
 ```
 
-The interaction flow on the Android App is similarly structured:
+The interaction flow on the Android App is similarly structured. At app startup, add a Krymon backend service to talk to. For example, `http://<ip-of-laptop>>:8080`. 
 
-* At app startup, add a Krymon backend service to talk to. For example, `http://<ip-of-laptop>>:8080`. You can then click on that backend, at which point the App will list the services and statuses for that backend. You can add and remove backends from this list view as well.
+You can then click on that backend, at which point the App will list the services and statuses for that backend. You can add and remove backends from this list view as well.
 
