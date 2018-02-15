@@ -28,9 +28,8 @@ public class ListBackendsActivity extends AppCompatActivity {
         Set<String> backends = settings.getStringSet("krymon_backends", new HashSet<String>());
         if (newBackend != null) {
             backends.add(newBackend);
-            settings.edit().clear().putStringSet("krymon_backends", backends).commit();
+            settings.edit().clear().putStringSet("krymon_backends", backends).apply();
         }
-        Log.i("foo", settings.getStringSet("backends", new HashSet<String>()).toString());
         super.onCreate(savedInstanceState);
         setContentView(krymon.R.layout.activity_list_backends);
         Toolbar toolbar = findViewById(krymon.R.id.toolbar);
