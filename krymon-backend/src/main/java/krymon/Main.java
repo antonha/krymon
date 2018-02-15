@@ -8,7 +8,7 @@ public class Main {
     public static void main(String[] args) {
         Json.mapper.registerModule(new JodaModule());
         Krymon krymon = new Krymon(Vertx.vertx(), parseFile(args), 60_000);
-        krymon.start();
+        krymon.start().toBlocking().value();
     }
 
     private static String parseFile(String[] args) {

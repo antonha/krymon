@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -83,24 +84,32 @@ public class Krymon {
 
     private Single<HttpClientResponse> get(String url) {
         return Single.create(subscriber -> httpClient.getAbs(url, subscriber::onSuccess)
+                .setTimeout(5000)
                 .exceptionHandler(subscriber::onError).end());
     }
 
-
-    public synchronized void start() {
+    public synchronized Single<Void> start() {
         if (!running) {
             running = true;
             this.httpClient = vertx.createHttpClient();
-            vertx.createHttpServer()
-                    .requestHandler(createRouter(vertx)::accept)
-                    .listen(8080, handler -> {
-                        if (handler.succeeded()) {
-                            log.info("Krymon listening on port {0}", String.valueOf(8080));
-                        } else {
-                            log.error("Failed to start on port {0}", handler.cause(), String.valueOf(8080));
-                        }
-                    });
+            return listen(vertx.createHttpServer().requestHandler(createRouter(vertx)::accept), 8080)
+                    .doOnEach(ig -> log.info("Krymon listening on port {0}", String.valueOf(8080)))
+                    .doOnEach(t -> log.error("Failed to start on port {0}", t, String.valueOf(8080)));
+        } else {
+            return Single.just(null);
         }
+
+    }
+
+    private Single<Void> listen(HttpServer httpServer, int port) {
+        return Single.create(subscriber ->
+                httpServer.listen(port, handler -> {
+                    if (handler.succeeded()) {
+                        subscriber.onSuccess(null);
+                    } else {
+                        subscriber.onError(handler.cause());
+                    }
+                }));
     }
 
     private Router createRouter(Vertx vertx) {

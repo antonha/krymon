@@ -1,4 +1,5 @@
 import com.fasterxml.jackson.datatype.joda.JodaModule;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
@@ -14,6 +15,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Seconds;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import rx.Single;
@@ -29,16 +31,16 @@ import static org.junit.Assert.assertEquals;
 public class KrymonTest {
 
     private static final long CHECK_PERIOD = 100;
-    private static Krymon krymon;
-    private static Vertx vertx;
-    private static HttpClient httpClient;
+    private Krymon krymon;
+    private Vertx vertx;
+    private HttpClient httpClient;
 
-    @BeforeClass
-    public static void setupClass() throws IOException {
+    @Before
+    public void setup() throws IOException {
         vertx = Vertx.vertx();
         Json.mapper.registerModule(new JodaModule());
         krymon = new Krymon(vertx, tmpFile().getAbsolutePath(), CHECK_PERIOD);
-        krymon.start();
+        krymon.start().toBlocking().value();
 
         httpClient = vertx.createHttpClient();
     }
@@ -50,16 +52,22 @@ public class KrymonTest {
         return file;
     }
 
-    @AfterClass
-    public static void afterClass() {
-        vertx.close();
-    }
-
     @After
     public void cleanup() {
         for (Service service : getServices().getServices()) {
             delete(service.getId());
         }
+        close(vertx).toBlocking().value();
+    }
+
+    Single<Void> close(Vertx vertx){
+        return Single.create(subscriber -> vertx.close(event -> {
+            if(event.succeeded()){
+                subscriber.onSuccess(null);
+            } else {
+                subscriber.onError(event.cause());
+            }
+        }));
     }
 
     @Test
@@ -115,50 +123,59 @@ public class KrymonTest {
     @Test
     public void shouldCheckStatusOfDifferentServices() throws InterruptedException {
         HttpServer server1 = startServerWithStatus(200);
-        addService(new NewService("service1", "http://0.0.0.0:" + server1.actualPort()));
-
         HttpServer server2 = startServerWithStatus(500);
-        addService(new NewService("service2", "http://0.0.0.0:" + server2.actualPort()));
+        try{
+            addService(new NewService("service1", "http://0.0.0.0:" + server1.actualPort()));
 
-        await(() -> {
-            List<Service> services = getServices().getServices();
-            Service service1 = withName(services, "service1");
-            assertEquals(Service.Status.OK, service1.getStatus());
-            Service service2 = withName(services, "service2");
-            assertEquals(Service.Status.FAIL, service2.getStatus());
-        });
+            addService(new NewService("service2", "http://0.0.0.0:" + server2.actualPort()));
+
+            await(() -> {
+                List<Service> services = getServices().getServices();
+                Service service1 = withName(services, "service1");
+                assertEquals(Service.Status.OK, service1.getStatus());
+                Service service2 = withName(services, "service2");
+                assertEquals(Service.Status.FAIL, service2.getStatus());
+            });
+        } finally {
+            server1.close();
+            server2.close();
+        }
     }
 
 
     @Test
     public void shouldHandleChangingStatus() throws InterruptedException {
         HttpServer server = startServerWithStatus(200);
-        addService(new NewService("server", "http://0.0.0.0:" + server.actualPort()));
+        try{
+            addService(new NewService("server", "http://0.0.0.0:" + server.actualPort()));
 
-        await(() -> {
-            Service service = getServices().getServices().get(0);
-            assertEquals(Service.Status.OK, service.getStatus());
-            assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 2);
-        });
+            await(() -> {
+                Service service = getServices().getServices().get(0);
+                assertEquals(Service.Status.OK, service.getStatus());
+                assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 2);
+            });
 
-        setStatus(server, 500);
-        await(() -> {
-            Service failingService = getServices().getServices().get(0);
-            assertEquals(Service.Status.FAIL, failingService.getStatus());
-            assertTrue(Seconds.secondsBetween(failingService.getLastCheck(), DateTime.now()).getSeconds() < 10);
-        });
+            setStatus(server, 500);
+            await(() -> {
+                Service failingService = getServices().getServices().get(0);
+                assertEquals(Service.Status.FAIL, failingService.getStatus());
+                assertTrue(Seconds.secondsBetween(failingService.getLastCheck(), DateTime.now()).getSeconds() < 10);
+            });
 
-        setStatus(server, 200);
-        await(() -> {
-            Service onceAgainSucceding = getServices().getServices().get(0);
-            assertEquals(Service.Status.OK, onceAgainSucceding.getStatus());
-            assertTrue(Seconds.secondsBetween(onceAgainSucceding.getLastCheck(), DateTime.now()).getSeconds() < 10);
-        });
+            setStatus(server, 200);
+            await(() -> {
+                Service onceAgainSucceding = getServices().getServices().get(0);
+                assertEquals(Service.Status.OK, onceAgainSucceding.getStatus());
+                assertTrue(Seconds.secondsBetween(onceAgainSucceding.getLastCheck(), DateTime.now()).getSeconds() < 10);
+            });
+        } finally {
+            server.close();
+        }
     }
 
     @Test
     public void shouldHandleFoobarPort() throws InterruptedException {
-        addService(new NewService("server", "http://0.0.0.0:" + 55)).getHeader("Location");
+        addService(new NewService("server", "http://0.0.0.0:" + 554215));
         await(() -> {
             Service service = getServices().getServices().get(0);
             assertEquals(Service.Status.FAIL, service.getStatus());
