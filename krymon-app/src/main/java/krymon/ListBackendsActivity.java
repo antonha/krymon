@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -24,13 +25,12 @@ public class ListBackendsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         String newBackend = getIntent().getStringExtra(NEW_BACKEND);
         SharedPreferences settings = getSharedPreferences("krymon", 0);
-        Set<String> backends = settings.getStringSet("backends", new HashSet<String>());
+        Set<String> backends = settings.getStringSet("krymon_backends", new HashSet<String>());
         if (newBackend != null) {
             backends.add(newBackend);
-            SharedPreferences.Editor edit = settings.edit();
-            edit.putStringSet("backends", backends);
-            edit.commit();
+            settings.edit().clear().putStringSet("krymon_backends", backends).commit();
         }
+        Log.i("foo", settings.getStringSet("backends", new HashSet<String>()).toString());
         super.onCreate(savedInstanceState);
         setContentView(krymon.R.layout.activity_list_backends);
         Toolbar toolbar = findViewById(krymon.R.id.toolbar);
