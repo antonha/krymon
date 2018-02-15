@@ -12,6 +12,7 @@ import krymon.Service;
 import krymon.ServiceList;
 import org.joda.time.DateTime;
 import org.joda.time.Seconds;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,6 +53,13 @@ public class KrymonTest {
     @AfterClass
     public static void afterClass() {
         vertx.close();
+    }
+
+    @After
+    public void cleanup() {
+        for (Service service : getServices().getServices()) {
+            delete(service.getId());
+        }
     }
 
     @Test
@@ -102,9 +110,6 @@ public class KrymonTest {
         Service service = getServices().getServices().get(0);
         assertEquals(404, delete(service.getId() + "foobar").statusCode());
         assertEquals(200, delete(service.getId()).statusCode());
-
-        delete(service.getId());
-        assertTrue(getServices().getServices().isEmpty());
     }
 
     @Test
@@ -115,74 +120,70 @@ public class KrymonTest {
         HttpServer server2 = startServerWithStatus(500);
         addService(new NewService("service2", "http://0.0.0.0:" + server2.actualPort()));
 
-        Thread.sleep(5 * CHECK_PERIOD);
-
-        List<Service> services = getServices().getServices();
-        Service service1 = withName(services, "service1");
-        assertEquals(Service.Status.OK, service1.getStatus());
-        Service service2 = withName(services, "service2");
-        assertEquals(Service.Status.FAIL, service2.getStatus());
-
-        delete(service1.getId());
-        delete(service2.getId());
-        assertTrue(getServices().getServices().isEmpty());
+        await(() -> {
+            List<Service> services = getServices().getServices();
+            Service service1 = withName(services, "service1");
+            assertEquals(Service.Status.OK, service1.getStatus());
+            Service service2 = withName(services, "service2");
+            assertEquals(Service.Status.FAIL, service2.getStatus());
+        });
     }
 
-    private Service withName(List<Service> services, String name) {
-        for(Service s: services){
-            if(name.equals(s.getName())){
-                return s;
-            }
-        }
-        return null;
-    }
 
     @Test
     public void shouldHandleChangingStatus() throws InterruptedException {
         HttpServer server = startServerWithStatus(200);
         addService(new NewService("server", "http://0.0.0.0:" + server.actualPort()));
 
-        Thread.sleep(10 * CHECK_PERIOD);
-        Service service = getServices().getServices().get(0);
-        assertEquals(Service.Status.OK, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 2);
+        await(() -> {
+            Service service = getServices().getServices().get(0);
+            assertEquals(Service.Status.OK, service.getStatus());
+            assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 2);
+        });
 
         setStatus(server, 500);
-        Thread.sleep(10 * CHECK_PERIOD);
-        Service failingService = getServices().getServices().get(0);
-        assertEquals(Service.Status.FAIL, failingService.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
+        await(() -> {
+            Service failingService = getServices().getServices().get(0);
+            assertEquals(Service.Status.FAIL, failingService.getStatus());
+            assertTrue(Seconds.secondsBetween(failingService.getLastCheck(), DateTime.now()).getSeconds() < 10);
+        });
 
         setStatus(server, 200);
-        Thread.sleep(10 * CHECK_PERIOD);
-        Service onceAgainSucceding = getServices().getServices().get(0);
-        assertEquals(Service.Status.OK, onceAgainSucceding.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
-
-        delete(onceAgainSucceding.getId());
-        assertTrue(getServices().getServices().isEmpty());
+        await(() -> {
+            Service onceAgainSucceding = getServices().getServices().get(0);
+            assertEquals(Service.Status.OK, onceAgainSucceding.getStatus());
+            assertTrue(Seconds.secondsBetween(onceAgainSucceding.getLastCheck(), DateTime.now()).getSeconds() < 10);
+        });
     }
 
     @Test
     public void shouldHandleFoobarPort() throws InterruptedException {
-        addService(new NewService("server", "http://0.0.0.0:" + 124555));
-        Thread.sleep(10 * CHECK_PERIOD);
-        Service service = getServices().getServices().get(0);
-        assertEquals(Service.Status.FAIL, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
-        delete(service.getId());
-        assertTrue(getServices().getServices().isEmpty());
+        addService(new NewService("server", "http://0.0.0.0:" + 55)).getHeader("Location");
+        await(() -> {
+            Service service = getServices().getServices().get(0);
+            assertEquals(Service.Status.FAIL, service.getStatus());
+            assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
+        });
     }
+
 
     @Test
     public void shouldHandleFoobarUrl() throws InterruptedException {
         addService(new NewService("server", "8654###{]+[{}("));
-        Thread.sleep(10 * CHECK_PERIOD);
-        Service service = getServices().getServices().get(0);
-        assertEquals(Service.Status.FAIL, service.getStatus());
-        assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
-        delete(service.getId());
-        assertTrue(getServices().getServices().isEmpty());
+        await(() -> {
+            Service service = getServices().getServices().get(0);
+            assertEquals(Service.Status.FAIL, service.getStatus());
+            assertTrue(Seconds.secondsBetween(service.getLastCheck(), DateTime.now()).getSeconds() < 10);
+        });
+    }
+
+    private Service withName(List<Service> services, String name) {
+        for (Service s : services) {
+            if (name.equals(s.getName())) {
+                return s;
+            }
+        }
+        return null;
     }
 
     private void setStatus(HttpServer server, int newStatus) {
@@ -230,5 +231,25 @@ public class KrymonTest {
 
     private HttpClientResponse delete(String id) {
         return Single.<HttpClientResponse>create(subscriber -> httpClient.delete(8080, "0.0.0.0", "/service/" + id).handler(subscriber::onSuccess).end()).toBlocking().value();
+    }
+
+    private interface Condition {
+        void check();
+    }
+
+    private void await(Condition condition) throws InterruptedException {
+        AssertionError exception = null;
+        for (int i = 0; i < 1000; i++) {
+            try {
+                condition.check();
+                return;
+            } catch (AssertionError e) {
+                exception = e;
+            }
+            Thread.sleep(10);
+        }
+        if (exception != null) {
+            throw exception;
+        }
     }
 }
