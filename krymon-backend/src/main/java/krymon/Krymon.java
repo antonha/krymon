@@ -94,7 +94,7 @@ public class Krymon {
             this.httpClient = vertx.createHttpClient();
             return listen(vertx.createHttpServer().requestHandler(createRouter(vertx)::accept), 8080)
                     .doOnEach(ig -> log.info("Krymon listening on port {0}", String.valueOf(8080)))
-                    .doOnEach(t -> log.error("Failed to start on port {0}", t, String.valueOf(8080)));
+                    .doOnError(t -> log.error("Failed to start on port {0}", t, String.valueOf(8080)));
         } else {
             return Single.just(null);
         }
